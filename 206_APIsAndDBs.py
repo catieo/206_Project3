@@ -75,8 +75,6 @@ def get_user_tweets(user):
 # save the result in a variable called umich_tweets:
 umich_tweets = get_user_tweets("umich")
 
-
-
 ## Task 2 - Creating database and loading data into database
 ## You should load into the Users table:
 # The umich user, and all of the data about users that are mentioned 
@@ -84,7 +82,12 @@ umich_tweets = get_user_tweets("umich")
 # NOTE: For example, if the user with the "TedXUM" screen name is 
 # mentioned in the umich timeline, that Twitter user's info should be 
 # in the Users table, etc.
+conn = sqlite3.connect('206_APIsAndDBs.sqlite')
+cur = conn.cursor()
 
+#set up Users table 
+cur.execute('DROP TABLE IF EXISTS Users')
+cur.execute('CREATE TABLE Users (user_id TEXT, screen_name TEXT, num_favs INTEGER, description TEXT)')
 
 
 ## You should load into the Tweets table: 
@@ -92,6 +95,42 @@ umich_tweets = get_user_tweets("umich")
 # umich timeline.
 # NOTE: Be careful that you have the correct user ID reference in 
 # the user_id column! See below hints.
+
+#set up Tweets table 
+cur.execute('DROP TABLE IF EXISTS Tweets')
+cur.execute('CREATE TABLE Tweets (tweet_id TEXT, text TEXT, user_posted TEXT, time_posted TIMESTAMP, retweets INTEGER)')
+
+for tweet in umich_tweets:
+	#insert each tweet into the Tweets Table 
+	tweet_tup = tweet["id"], tweet["text"], tweet["user"]["id_str"], tweet["created_at"], tweet["retweet_count"]
+	cur.execute('INSERT INTO Tweets (tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)', tweet_tup)
+	#do a select, check to see if anything is there (does the entry already exist) 
+	user_id_str = tweet["user"]["id_str"]
+	cur.execute('SELECT user_id FROM Users WHERE user_id = ? LIMIT 1', (user_id_str,))
+	#if yes, don't insert
+	try:
+		(user_id,) = cur.fetchone()
+	#if no, insert
+	except:
+		user_tup = tweet["user"]["id_str"], tweet["user"]["screen_name"], tweet["user"]["favourites_count"], tweet["user"]["description"]
+		cur.execute('INSERT INTO Users (user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', user_tup)
+		#This worked! original poster was added to Users 
+	#SOMETHING LIKE: 
+	other_users = []
+	for person in tweet["entities"]["user_mentions"]:
+		other_users.append(api.get_user(person["screen_name"]))
+	# other_users is now a list of strings that are the screen names of whoever was mentioned in the tweet
+	#do a select, check to see if anything is there (does the entry already exist) 
+	for user in other_users:
+		user_id_str = user["id_str"]
+		cur.execute('SELECT user_id FROM Users WHERE user_id = ? LIMIT 1', (user_id_str,))
+		#if yes don't insert
+		try:
+			(user_id,) = cur.fetchone()
+		#if no, insert
+		except:
+			usertup = user["id_str"], user["screen_name"], user["favourites_count"], user["description"]
+			cur.execute('INSERT INTO Users (user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', usertup)
 
 
 ## HINT: There's a Tweepy method to get user info, so when you have a 
@@ -103,7 +142,7 @@ umich_tweets = get_user_tweets("umich")
 ## text to find out which they are! Do some nested data investigation 
 ## on a dictionary that represents 1 tweet to see it!
 
-
+conn.commit()
 ## Task 3 - Making queries, saving data, fetching data
 
 # All of the following sub-tasks require writing SQL statements 
@@ -150,6 +189,7 @@ joined_data2 = True
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END 
 ### OF THE FILE HERE SO YOU DO NOT LOCK YOUR DATABASE (it's fixable, 
 ### but it's a pain). ###
+cur.close()
 
 ###### TESTS APPEAR BELOW THIS LINE ######
 ###### Note that the tests are necessary to pass, but not sufficient -- 
