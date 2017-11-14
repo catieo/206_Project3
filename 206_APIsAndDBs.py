@@ -59,9 +59,11 @@ except:
 
 # Define your function get_user_tweets here:
 def get_user_tweets(user):
+	# check if the user was already in the cache and return contents if so
 	if user in CACHE_DICTION:
 		print("Data was in the cache")
 		return CACHE_DICTION[user]
+	#if not, make a request to the Twitter API, save results in cache, and return 
 	else:
 		print("Making a request for data")
 		results = api.user_timeline(screen_name=user)
@@ -100,11 +102,13 @@ cur.execute('CREATE TABLE Users (user_id TEXT, screen_name TEXT, num_favs INTEGE
 cur.execute('DROP TABLE IF EXISTS Tweets')
 cur.execute('CREATE TABLE Tweets (tweet_id TEXT, text TEXT, user_posted TEXT, time_posted TIMESTAMP, retweets INTEGER)')
 
+#fill in Tweets and Users table 
 for tweet in umich_tweets:
 	#insert each tweet into the Tweets Table 
 	tweet_tup = tweet["id"], tweet["text"], tweet["user"]["id_str"], tweet["created_at"], tweet["retweet_count"]
 	cur.execute('INSERT INTO Tweets (tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)', tweet_tup)
-	#do a select, check to see if anything is there (does the entry already exist) 
+	
+	#do a select, check to see if anything is there (is there already an entry for the user who tweeted this tweet) 
 	user_id_str = tweet["user"]["id_str"]
 	cur.execute('SELECT user_id FROM Users WHERE user_id = ? LIMIT 1', (user_id_str,))
 	#if yes, don't insert
@@ -114,8 +118,8 @@ for tweet in umich_tweets:
 	except:
 		user_tup = tweet["user"]["id_str"], tweet["user"]["screen_name"], tweet["user"]["favourites_count"], tweet["user"]["description"]
 		cur.execute('INSERT INTO Users (user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', user_tup)
-		#This worked! original poster was added to Users 
-	#SOMETHING LIKE: 
+	
+	#no do the same for the users mentioned in the tweet
 	other_users = []
 	for person in tweet["entities"]["user_mentions"]:
 		other_users.append(api.get_user(person["screen_name"]))
