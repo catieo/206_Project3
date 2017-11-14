@@ -186,14 +186,19 @@ for row in cur.execute('SELECT description FROM Users WHERE num_favs > 500'):
 # Make a query using an INNER JOIN to get a list of tuples with 2 
 # elements in each tuple: the user screenname and the text of the 
 # tweet. Save the resulting list of tuples in a variable called joined_data2.
-joined_data = True
+joined_data = []
+for row in cur.execute('SELECT Users.screen_name, Tweets.text FROM Users JOIN Tweets ON Tweets.user_posted = Users.user_id'):
+	joined_data.append(row)
+
 
 # Make a query using an INNER JOIN to get a list of tuples with 2 
 # elements in each tuple: the user screenname and the text of the 
 # tweet in descending order based on retweets. Save the resulting 
 # list of tuples in a variable called joined_data2.
 
-joined_data2 = True
+joined_data2 = []
+for row in cur.execute('SELECT Users.screen_name, Tweets.text FROM Users JOIN Tweets ON Tweets.user_posted = Users.user_id ORDER BY Tweets.retweets DESC'):
+	joined_data2.append(row)
 
 
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END 
